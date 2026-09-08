@@ -1,0 +1,26 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "STM32F405 烧录+调试 (ST-Link)",
+            "type": "stlinkgdbtarget",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "program": "${workspaceFolder}/build/Debug/Control_car.elf",
+            "deviceName": "STM32F405RG",
+            "svdPath": "C:\\Users\\twyyd\\AppData\\Local\\stm32cube\\packs\\STMicroelectronics\\stm32f4xx_dfp\\1.2.0\\SVD\\STM32F405.svd",
+            "deviceCore": "CM4",
+            "gdb": "C:\\Users\\twyyd\\AppData\\Local\\stm32cube\\bundles\\gnu-gdb-for-stm32\\14.3.1+st.2\\bin\\arm-none-eabi-gdb.exe",
+            "serverCwd": "C:\\Users\\twyyd\\AppData\\Local\\stm32cube\\bundles\\stlink-gdbserver\\7.14.0+st.2\\bin",
+            "serverExe": "ST-LINK_gdbserver.exe",
+            "serverCubeProgPath": "C:\\Users\\twyyd\\AppData\\Local\\stm32cube\\bundles\\programmer\\2.23.0\\bin",
+            "serverInterface": "SWD",
+            "serverInterfaceFrequency": "Auto",
+            "serverReset": "在复位下连接",
+            "serverVerify": true,
+            "runEntry": "main",
+            "preBuild": "",
+            "preLaunchTask": "build"
+        }
+    ]
+}

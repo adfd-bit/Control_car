@@ -1,0 +1,6 @@
+# 项目统一代码风格（clang-format）
+# 规则：4 空格缩进、不用 Tab、每行最长 120 字符、不自动重排 #include
+BasedOnStyle: LLVM
+IndentWidth: 4
+ColumnLimit: 120
+SortIncludes: false
