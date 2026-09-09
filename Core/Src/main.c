@@ -82,6 +82,7 @@ uint8_t servo_re[4];
 uint32_t ALL_time = 0;
 volatile bool send_data_state = true;
 volatile bool opsready = false;
+volatile bool catready = false;
 volatile bool ar_screen_sta = false; /* true = AR_Screen 接收数据完成标志，主循环用 */
 SystemState_t currentState = STATE_INIT;
 /* USER CODE END PV */
@@ -160,11 +161,13 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
             if (CAT_redata[9] == 0xCF && CAT_redata[10] == 0xFC) {
                 CAT_x = *(int16_t *)&CAT_redata[4];
                 CAT_y = *(int16_t *)&CAT_redata[6];
+                catready = true;
             }
         } else if (CAT_redata[0] == 0xAF && CAT_redata[1] == 0XFA && CAT_redata[2] == 0x0C) {
             if (CAT_redata[10] == 0xCF && CAT_redata[11] == 0xFC) {
                 CAT_x = *(int16_t *)&CAT_redata[5];
                 CAT_y = *(int16_t *)&CAT_redata[7];
+                catready = true;
             }
         }
         /* DMA_NORMAL 模式收完一包即停，必须重装接收，否则坐标只收一次 */

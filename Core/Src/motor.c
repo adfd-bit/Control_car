@@ -109,9 +109,9 @@ bool pid_to_v(float X_target, float Y_target, float angle_taget) { // 位移到�
     float kp = 0.6;                                                // pid参数可调
     float kd = 0.48;
     float ki = 0.0003;
-    double vx;
-    double vy;
-    double wv;
+    double vx = 0;
+    double vy = 0;
+    double wv = 0;
     if (!opsready)
         return false;
     opsready = false;
@@ -166,9 +166,11 @@ bool pid_to_v(float X_target, float Y_target, float angle_taget) { // 位移到�
     angle_OLD = ops_cache;
     X_OLD = OPS_X;
     Y_OLD = OPS_Y;
+
     xki_sum = xki_sum > kI_max ? kI_max : xki_sum > KI_min ? xki_sum : KI_min;
     yki_sum = yki_sum > kI_max ? kI_max : yki_sum > KI_min ? yki_sum : KI_min;
     ang_sum = ang_sum > kI_max ? kI_max : ang_sum > KI_min ? ang_sum : KI_min;
+
     if (send_data_state) {
         send_data_state = false;
         TIM1->CNT = 0;
