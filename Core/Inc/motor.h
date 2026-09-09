@@ -26,7 +26,6 @@
 #define rad_max 900
 #define rad_min -900
 #define va_max 160
-#define OPS9_TIMEOUT_MS 200 /* OPS9 传感器超时阈值：超过该时间无有效帧则强制停车 */
 
 extern uint32_t ALL_time;
 
@@ -42,8 +41,6 @@ extern PathPoint path[25];
 extern Node nodes[MAP_SIZE][MAP_SIZE];
 static uint16_t arrive_time __attribute__((unused)) = 0;
 extern volatile bool opsready;
-extern uint32_t OPS9_last_tick;
-extern bool ops9_lost;
 void delayus(uint32_t nus);
 void send_motor_speed(uint8_t id);
 void motor_go();

@@ -33,7 +33,7 @@
 #include "math.h"
 #include "servo_motor.h"
 #include "path_plan.h"
-#include "AR_Screen.h"
+#include "ar_screen.h"
 #include "lub_cat.h"
 /* USER CODE END Includes */
 
@@ -82,8 +82,6 @@ uint8_t servo_re[4];
 uint32_t ALL_time = 0;
 volatile bool send_data_state = true;
 volatile bool opsready = false;
-uint32_t OPS9_last_tick = 0;         /* 最后一次收到有效 OPS9 帧的时刻（ms），超时看门狗用 */
-bool ops9_lost = false;              /* true = OPS9 传感器超时，已强制停车 */
 volatile bool ar_screen_sta = false; /* true = AR_Screen 接收数据完成标志，主循环用 */
 SystemState_t currentState = STATE_INIT;
 /* USER CODE END PV */
@@ -183,7 +181,6 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
             if (OPS_X >= -20000.0f && OPS_X <= 20000.0f && OPS_Y >= -20000.0f && OPS_Y <= 20000.0f &&
                 OPS_angle >= -360.0f && OPS_angle <= 360.0f) {
                 opsready = true;
-                OPS9_last_tick = HAL_GetTick(); /* 只有有效帧才刷新看门狗：一直收错帧同样会触发超时 */
             }
         }
         /* DMA_NORMAL 模式收完一包即停，必须重装接收，否则坐标只收一次 */
@@ -273,8 +270,7 @@ int main(void) {
     //--------------------------------初始化----------------------------------
     servo_init();
     motor_en();
-    ops9_receive_start();           /* 启动 OPS9 接收 DMA */
-    OPS9_last_tick = HAL_GetTick(); /* 看门狗从此刻开始计时，防止开机误触发 */
+    ops9_receive_start(); /* 启动 OPS9 接收 DMA */
     //--------------------------------调试----------------------------------
     //	HAL_UART_Receive_IT(&huart6, pathl, sizeof(pathl));//路径规划
     // HAL_UART_Receive_IT(&huart6, hc_os, 16); // 全局定位
@@ -326,10 +322,6 @@ int main(void) {
         case STATE_INIT:
             continue;
         case STATE_NAV: {
-            if (ops9_lost) { // OPS9 超时已停车，转入停车状态
-                currentState = STATE_STOP;
-                continue;
-            }
             if (posit_state == 0 && pid_to_goal(200, 200, 0)) {
                 posit_state = 1;
             }
@@ -365,7 +357,6 @@ int main(void) {
         }
         case STATE_STOP: {
             motor_stop();
-            ops9_lost = false; // 清除超时标志，允许下次指令重新导航
             HAL_UART_Transmit(&huart6, (uint8_t *)"over", sizeof("over") - 1, HAL_MAX_DELAY);
             currentState = STATE_INIT;
             break;

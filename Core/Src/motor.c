@@ -104,20 +104,7 @@ void control_v(double vx, double vy, double wv) { // 转换成对应的电机的
 //	motor[2] = (int)(vy + vx - 0.6f * wv);
 //	motor[3] = (int)(vy - vx + 0.6f * wv);
 // }
-static bool ops9_timeout(void) { // OPS9 传感器超时检测：长时间无有效帧则强制停车
-    if (HAL_GetTick() - OPS9_last_tick > OPS9_TIMEOUT_MS) {
-        if (!ops9_lost) {
-            ops9_lost = true;
-            for (int i = 0; i < 4; i++)
-                motor[i] = 0;
-            HAL_TIM_Base_Stop_IT(&htim1);
-            send_data_state = true;
-            motor_stop();
-        }
-        return true;
-    }
-    return false;
-}
+
 bool pid_to_v(float X_target, float Y_target, float angle_taget) { // 位移到对应坐标
     float kp = 0.6;                                                // pid参数可调
     float kd = 0.48;
@@ -125,8 +112,6 @@ bool pid_to_v(float X_target, float Y_target, float angle_taget) { // 位移到�
     double vx;
     double vy;
     double wv;
-    if (ops9_timeout())
-        return false;
     if (!opsready)
         return false;
     opsready = false;
@@ -216,9 +201,6 @@ bool pid_to_v(float X_target, float Y_target, float angle_taget) { // 位移到�
 bool pid_to_goal(float X_target, float Y_target, float angle_taget) { // 绝对坐标
     char c[40];
     while (1) {
-        if (ops9_lost)
-            return false; // OPS9 超时已停车，退出阻塞循环
-
         //		注意删除
         if (HAL_GetTick() - ALL_time > 100) {
             int len = sprintf(c, "%f,%f,%f\n", OPS_X, OPS_Y, OPS_angle);
@@ -262,9 +244,6 @@ bool pid_to_path(int sta_x, int sta_y, int goal_x, int goal_y) { // Astar路径�
         }
         state = false;
         while (!state) {
-            if (ops9_lost)
-                return false; // OPS9 超时已停车，退出路径规划
-
             // 注意删除
             if (HAL_GetTick() - ALL_time > 100) {
                 int len = sprintf(c, "%f,%f,%f\n", OPS_X, OPS_Y, OPS_angle);
@@ -325,7 +304,6 @@ static void nb_debug_send(void){// 原阻塞循环里的 100ms 调试输出（�
 
 bool pid_to_goal_nb(float X_target,float Y_target,float angle_taget){
         // 阻塞版就是 while(1){ pid_to_v() }，非阻塞版每次调用只推进一步
-        if(ops9_lost) return false;// OPS9 超时已停车
         nb_debug_send();
         return pid_to_v(X_target, Y_target, angle_taget);
 }
@@ -337,10 +315,6 @@ bool pid_to_path_nb(int sta_x,int sta_y,int goal_x,int goal_y){  // Astar路径�
                 nb_sta_x = sta_x;   nb_sta_y = sta_y;
                 nb_goal_x = goal_x; nb_goal_y = goal_y;
                 nb_state = NB_IDLE;
-        }
-        if(ops9_lost){          // OPS9 超时已停车：复位状态机，等待下次任务
-                nb_state = NB_IDLE;
-                return false;
         }
         nb_debug_send();        // 与原阻塞循环相同的调试输出（注意删除）
 
@@ -392,10 +366,6 @@ nb_angle)){ nb_j += 2; if(nb_j >= path_length){// 全部走完 nb_state = NB_DON
  *--------------------------------------------------------------------*/
 /*
                 case STATE_NAV:{
-                        if(ops9_lost){//OPS9 超时已停车，转入停车状态
-                                currentState = STATE_STOP;
-                                continue;
-                        }
                         switch(posit_state){
                         case 0: if(pid_to_goal_nb(200, 200, 0)){ posit_state = 1; } break;
                         case 1: if(pid_to_path_nb(0,0,2,0)){    posit_state = 2; } break;//路径规划
