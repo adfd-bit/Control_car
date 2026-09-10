@@ -106,15 +106,12 @@ void control_v(double vx, double vy, double wv) { // 转换成对应的电机的
 // }
 
 bool pid_to_v(float X_target, float Y_target, float angle_taget) { // 位移到对应坐标
-    float kp = 0.6;                                                // pid参数可调
-    float kd = 0.48;
-    float ki = 0.0003;
-    double vx = 0;
-    double vy = 0;
-    double wv = 0;
     if (!opsready)
         return false;
     opsready = false;
+    error_x = Pixel_Width_center - CAT_x;
+    error_y = Pixel_Height_center - CAT_y;
+    angle_error = angle_taget - ops_angle;
     float ops_cache = OPS_angle;
     if (angle_taget == 180 && ops_cache < 0) {
         ops_cache = ops_cache + 360;
@@ -206,7 +203,7 @@ bool pid_to_goal(float X_target, float Y_target, float angle_taget) { // 绝对�
         //		注意删除
         if (HAL_GetTick() - ALL_time > 100) {
             int len = sprintf(c, "%f,%f,%f\n", OPS_X, OPS_Y, OPS_angle);
-            HAL_UART_Transmit(&huart6, (uint8_t *)c, len, HAL_MAX_DELAY);
+            HAL_UART_Transmit(&huart5, (uint8_t *)c, len, HAL_MAX_DELAY);
             ALL_time = HAL_GetTick();
         }
 
@@ -249,7 +246,7 @@ bool pid_to_path(int sta_x, int sta_y, int goal_x, int goal_y) { // Astar路径�
             // 注意删除
             if (HAL_GetTick() - ALL_time > 100) {
                 int len = sprintf(c, "%f,%f,%f\n", OPS_X, OPS_Y, OPS_angle);
-                HAL_UART_Transmit(&huart6, (uint8_t *)c, len, HAL_MAX_DELAY);
+                HAL_UART_Transmit(&huart5, (uint8_t *)c, len, HAL_MAX_DELAY);
                 ALL_time = HAL_GetTick();
             }
 
@@ -299,7 +296,7 @@ static void nb_debug_send(void){// 原阻塞循环里的 100ms 调试输出（�
         char c[40];
         if(HAL_GetTick() - ALL_time > 100){
                 int len = sprintf(c,"%f,%f,%f\n",OPS_X,OPS_Y,OPS_angle);
-                HAL_UART_Transmit(&huart6, (uint8_t*)c, len, HAL_MAX_DELAY);
+                HAL_UART_Transmit(&huart5, (uint8_t*)c, len, HAL_MAX_DELAY);
                 ALL_time = HAL_GetTick();
         }
 }

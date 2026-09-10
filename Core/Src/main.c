@@ -19,7 +19,6 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "dma.h"
-#include "stm32f4xx_hal_uart.h"
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
@@ -196,24 +195,24 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
 }
 /*-------------------------------------串口外设---------------------------------*/
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
-    // if (huart == &huart6) { // 全局定位
+    // if (huart == &huart5) { // 全局定位
     //     re_sta = true;
-    //     HAL_UART_Receive_IT(&huart6, hc_os, 16);
+    //     HAL_UART_Receive_IT(&huart5, hc_os, 16);
     // }
 
-    // if(huart == &huart6){//路径规划
+    // if(huart == &huart5){//路径规划
     // 	pt_sta = 1;
     // 	pt[0] = pathl[0]-48;
     // 	pt[1] = pathl[1]-48;
     // 	pt[2] = pathl[2]-48;
     // 	pt[3] = pathl[3]-48;
     // 	currentState = STATE_NAV;
-    // 	HAL_UART_Receive_IT(&huart6, pathl, sizeof(pathl));//路径规划
+    // 	HAL_UART_Receive_IT(&huart5, pathl, sizeof(pathl));//路径规划
     // }
 
-    if (huart == &huart6) { // PWM调节
+    if (huart == &huart5) { // PWM调节
         servo_set_angle(servo_re[0], (servo_re[1] - 48) * 100 + (servo_re[2] - 48) * 10 + servo_re[3] - 48);
-        HAL_UART_Receive_IT(&huart6, servo_re, 4);
+        HAL_UART_Receive_IT(&huart5, servo_re, 4);
     }
 }
 /*------------------------------------数据接收错误重启----------------------------------*/
@@ -275,10 +274,10 @@ int main(void) {
     motor_en();
     ops9_receive_start(); /* 启动 OPS9 接收 DMA */
     //--------------------------------调试----------------------------------
-    //	HAL_UART_Receive_IT(&huart6, pathl, sizeof(pathl));//路径规划
-    // HAL_UART_Receive_IT(&huart6, hc_os, 16); // 全局定位
-    HAL_UART_Receive_IT(&huart6, servo_re, 4); // PWM调节
-    //	HAL_UART_Receive_IT(&huart6, &receive, 1);
+    //	HAL_UART_Receive_IT(&huart5, pathl, sizeof(pathl));//路径规划
+    // HAL_UART_Receive_IT(&huart5, hc_os, 16); // 全局定位
+    HAL_UART_Receive_IT(&huart5, servo_re, 4); // PWM调节
+    //	HAL_UART_Receive_IT(&huart5, &receive, 1);
     TIM1->ARR = 5000 - 1; // 电机发送数据频率
     uint8_t posit_state = 0;
     //   HAL_TIM_Base_Start_IT(&htim3);//OPS9启动
@@ -315,7 +314,7 @@ int main(void) {
                 else
                     goal_w = -((hc_os[12] - 48) * 100 + (hc_os[13] - 48) * 10 + hc_os[14] - 48);
                 if (pid_to_goal(goal_x, goal_y, goal_w)) {
-                    HAL_UART_Transmit(&huart6, (uint8_t *)"okk", sizeof("okk") - 1, HAL_MAX_DELAY);
+                    HAL_UART_Transmit(&huart5, (uint8_t *)"okk", sizeof("okk") - 1, HAL_MAX_DELAY);
                 }
             }
         }
@@ -360,7 +359,8 @@ int main(void) {
         }
         case STATE_STOP: {
             motor_stop();
-            HAL_UART_Transmit(&huart6, (uint8_t *)"over", sizeof("over") - 1, HAL_MAX_DELAY);
+            // 注意删除
+            HAL_UART_Transmit(&huart5, (uint8_t *)"over", sizeof("over") - 1, HAL_MAX_DELAY);
             currentState = STATE_INIT;
             break;
         }

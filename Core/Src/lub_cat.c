@@ -23,20 +23,21 @@ void Lub_Cat_receive_stop() {
     HAL_UART_AbortReceive(&huart1);
 }
 bool pid_to_cat(float angle_taget) {
-    error_x = Pixel_Width_center - CAT_x;
-    error_y = Pixel_Height_center - CAT_y;
-    angle_error = angle_taget - ops_angle;
-
     if (!catready || !opsready)
         return false;
     catready = false;
     opsready = false;
+
     float Kp = 0.1f; // x轴比例增益
     float Kd = 0.0f; // x轴微分增益
     float ki = 0.0f; // x轴积分增益
     double vx = 0;
     double vy = 0;
     double wv = 0;
+
+    error_x = Pixel_Width_center - CAT_x;
+    error_y = Pixel_Height_center - CAT_y;
+    angle_error = angle_taget - ops_angle;
 
     vy = (double)(Kp * error_x + Kd * (error_x - error_x_last) + ki * error_x_sum);
     vx = (double)(Kp * error_y + Kd * (error_y - error_y_last) + ki * error_y_sum);
@@ -84,5 +85,18 @@ bool pid_to_cat(float angle_taget) {
     } else {
         calibrate_time = 0;
         return false;
+    }
+}
+bool cat_centre_calibrate() {
+    char c[40];
+    while (1) {
+        // 注意删除
+        sprintf(c, "CAT_x: %d, CAT_y: %d, OPS_angle: %f\n", CAT_x, CAT_y, OPS_angle);
+        hal_uart_transmit(&huart5, (uint8_t *)c, strlen(c), HAL_MAX_DELAY);
+
+        if (pid_to_cat(current_r)) {
+            motor_stop();
+            return true;
+        }
     }
 }
