@@ -92,7 +92,7 @@ bool cat_centre_calibrate() {
     while (1) {
         // 注意删除
         sprintf(c, "CAT_x: %d, CAT_y: %d, OPS_angle: %f\n", CAT_x, CAT_y, OPS_angle);
-        hal_uart_transmit(&huart5, (uint8_t *)c, strlen(c), HAL_MAX_DELAY);
+        HAL_UART_Transmit(&huart5, (uint8_t *)c, sizeof(c), HAL_MAX_DELAY);
 
         if (pid_to_cat(current_r)) {
             motor_stop();

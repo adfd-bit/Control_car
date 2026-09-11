@@ -109,9 +109,10 @@ bool pid_to_v(float X_target, float Y_target, float angle_taget) { // 位移到�
     if (!opsready)
         return false;
     opsready = false;
-    error_x = Pixel_Width_center - CAT_x;
-    error_y = Pixel_Height_center - CAT_y;
-    angle_error = angle_taget - ops_angle;
+    double vx, vy, wv;
+    float kp = 0.6; // pid参数可调
+    float kd = 0.48;
+    float ki = 0.0003;
     float ops_cache = OPS_angle;
     if (angle_taget == 180 && ops_cache < 0) {
         ops_cache = ops_cache + 360;
