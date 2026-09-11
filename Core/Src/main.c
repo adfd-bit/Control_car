@@ -76,7 +76,7 @@ bool pt_sta = false;
 uint8_t hc_os[16];
 int goal_x = 0, goal_y = 0, goal_w = 0;
 volatile bool re_sta = false;
-uint8_t servo_re[4];
+uint8_t servo_re[17];
 /*-----------------------------------状态变量----------------------------------*/
 uint32_t ALL_time = 0;
 volatile bool send_data_state = true;
@@ -211,11 +211,20 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
     // }
 
     if (huart == &huart5) { // PWM调节
-        servo_set_angle(servo_re[0], (servo_re[1] - 48) * 100 + (servo_re[2] - 48) * 10 + servo_re[3] - 48);
-        HAL_UART_Receive_IT(&huart5, servo_re, 4);
+        servo_set_angle(1, (servo_re[0] - 48) * 100 + (servo_re[1] - 48) * 10 + (servo_re[2] - 48));
+        servo_set_angle(2, (servo_re[4] - 48) * 100 + (servo_re[5] - 48) * 10 + (servo_re[6] - 48));
+        servo_set_angle(3, (servo_re[8] - 48) * 100 + (servo_re[9] - 48) * 10 + (servo_re[10] - 48));
+        if (servo_re[12] == '0') { // 绝对位置
+            send_motor_place_absolute(servo_re[13] - 48,
+                                      (servo_re[14] - 48) * 100 + (servo_re[15] - 48) * 10 + (servo_re[16] - 48));
+        } else { // 相对位置
+            send_motor_place_relative(servo_re[13] - 48,
+                                      (servo_re[14] - 48) * 100 + (servo_re[15] - 48) * 10 + (servo_re[16] - 48));
+        }
+        HAL_UART_Receive_IT(&huart5, servo_re, 17);
     }
 }
-/*------------------------------------数据接收错误重启----------------------------------*/
+/*------------------------------------数据接收错误重启--------------------------------__*/
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart) {
     if (huart == &huart3) {
         // 无条件清除所有错误标志
@@ -270,13 +279,13 @@ int main(void) {
     MX_USART6_UART_Init();
     /* USER CODE BEGIN 2 */
     //--------------------------------初始化----------------------------------
-    servo_init();
-    motor_en();
+    servo_init();         // 舵机初始化
+    motor_en();           // 电机使能
     ops9_receive_start(); /* 启动 OPS9 接收 DMA */
     //--------------------------------调试----------------------------------
     //	HAL_UART_Receive_IT(&huart5, pathl, sizeof(pathl));//路径规划
     // HAL_UART_Receive_IT(&huart5, hc_os, 16); // 全局定位
-    HAL_UART_Receive_IT(&huart5, servo_re, 4); // PWM调节
+    HAL_UART_Receive_IT(&huart5, servo_re, 17); // PWM调节
     //	HAL_UART_Receive_IT(&huart5, &receive, 1);
     TIM1->ARR = 5000 - 1; // 电机发送数据频率
     uint8_t posit_state = 0;

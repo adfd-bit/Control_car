@@ -27,6 +27,7 @@ void motor_en() {
     motor_enable(2);
     motor_enable(3);
     motor_enable(4);
+    motor_enable(5);
 }
 void send_motor_place_absolute(uint8_t dir, uint32_t pulse) {
     pulse = pulse * 3200 / 36;
