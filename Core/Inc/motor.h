@@ -25,7 +25,6 @@
 #define rad_max 900
 #define rad_min -900
 #define va_max 160
-
 extern uint32_t ALL_time;
 
 extern volatile float OPS_angle;

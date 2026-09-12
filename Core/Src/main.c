@@ -123,35 +123,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
         }
     }
 }
-/*-------------------------------------鲁班猫通讯协议
-功能	数据包
-色环检测	AF FA 07 01 01 CF FC
-物料-红色	AF FA 08 02 01 03 CF FC
-物料-黄色	AF FA 08 02 02 00 CF FC
-物料-蓝色	AF FA 08 02 03 01 CF FC
-物料-绿色	AF FA 08 02 04 06 CF FC
-物料-黑色	AF FA 08 02 05 07 CF FC
-物料-浅蓝色	AF FA 08 02 06 04 CF FC
-YOLO-one	AF FA 08 03 00 03 CF FC
-YOLO-two	AF FA 08 03 01 02 CF FC
-YOLO-three	AF FA 08 03 02 01 CF FC
-YOLO-所有	AF FA 08 03 FF FC CF FC
-退出	AF FA 07 04 04 CF FC
-
-鲁班猫四 → 上位机
-功能	完整数据包 (hex)
-色环结果	AF FA 0B 01 xL xH yL yH CS CF FC
-物料结果	AF FA 0B 02 xL xH yL yH CS CF FC
-YOLO结果	AF FA 0C 04 cls xL xH yL yH CS CF FC
-xL/xH = x 坐标 int16 小端，CS = 数据区异或校验和
-AF FA 0C 03 cls xL xH yL yH CS CF FC
-            ↑  ↑   ↑  └─────────┘  └─┘
-              │  │   │     x,y 坐标   校验和
-           │  │   └────────────── 类别 (0/1/2)
-           │  └────────────────── 命令 0x03
-           └───────────────────── 总长度 = 6 + 6 = 12 = 0x0C
-校验和 = 0x03 ^ cls ^ xL ^ xH ^ yL ^ yH
---------------------------------------------------*/
 
 /*-------------------------------------串口接收事件回调函数-------------------------*/
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
