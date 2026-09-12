@@ -73,10 +73,13 @@ uint8_t receive;
 uint8_t pathl[4];
 int pt[4];
 bool pt_sta = false;
-uint8_t hc_os[16];
+uint8_t hc_os[17];
 int goal_x = 0, goal_y = 0, goal_w = 0;
 volatile bool re_sta = false;
 uint8_t servo_re[17];
+uint8_t lub_cat_re[4];
+volatile bool lubanready = false;
+bool luban_finish = false;
 /*-----------------------------------状态变量----------------------------------*/
 uint32_t ALL_time = 0;
 volatile bool send_data_state = true;
@@ -114,13 +117,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
             HAL_TIM_Base_Stop_IT(htim);
             currentState = STATE_NAV;
         }
-    } else if (htim == &htim2) {
-        static int add = 0;
-        add++;
-        if (add > 20) {
-            HAL_TIM_Base_Stop_IT(&htim2);
-            currentState = STATE_NAV;
-        }
     }
 }
 
@@ -132,12 +128,14 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
                 CAT_x = *(int16_t *)&CAT_redata[4];
                 CAT_y = *(int16_t *)&CAT_redata[6];
                 catready = true;
+                HAL_UART_Transmit(&huart5, (uint8_t *)"luban_ready", sizeof("luban_ready") - 1, HAL_MAX_DELAY);
             }
         } else if (CAT_redata[0] == 0xAF && CAT_redata[1] == 0XFA && CAT_redata[2] == 0x0C) {
             if (CAT_redata[10] == 0xCF && CAT_redata[11] == 0xFC) {
                 CAT_x = *(int16_t *)&CAT_redata[5];
                 CAT_y = *(int16_t *)&CAT_redata[7];
                 catready = true;
+                HAL_UART_Transmit(&huart5, (uint8_t *)"luban_ready", sizeof("luban_ready") - 1, HAL_MAX_DELAY);
             }
         }
         /* DMA_NORMAL 模式收完一包即停，必须重装接收，否则坐标只收一次 */
@@ -166,10 +164,10 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
 }
 /*-------------------------------------串口外设---------------------------------*/
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
-    if (huart == &huart5) { // 全局定位
-        re_sta = true;
-        HAL_UART_Receive_IT(&huart5, hc_os, 16);
-    }
+    // if (huart == &huart5) { // 全局定位
+    //     re_sta = true;
+    //     HAL_UART_Receive_IT(&huart5, hc_os, 17);
+    // }
 
     // if(huart == &huart5){//路径规划
     // 	pt_sta = 1;
@@ -194,6 +192,11 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
     //     }
     //     HAL_UART_Receive_IT(&huart5, servo_re, 17);
     // }
+
+    if (huart == &huart5) { // 鲁班猫
+        lubanready = true;
+        HAL_UART_Receive_IT(&huart1, lub_cat_re, 4);
+    }
 }
 /*------------------------------------数据接收错误重启--------------------------------__*/
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart) {
@@ -255,10 +258,11 @@ int main(void) {
     ops9_receive_start(); /* 启动 OPS9 接收 DMA */
     //--------------------------------调试----------------------------------
     //	HAL_UART_Receive_IT(&huart5, pathl, sizeof(pathl));//路径规划
-    HAL_UART_Receive_IT(&huart5, hc_os, 16); // 全局定位
+    // HAL_UART_Receive_IT(&huart5, hc_os, 17); // 全局定位
     // HAL_UART_Receive_IT(&huart5, servo_re, 17); // PWM调节
     //	HAL_UART_Receive_IT(&huart5, &receive, 1);
-    TIM1->ARR = 5000 - 1; // 电机发送数据频率
+    HAL_UART_Receive_IT(&huart1, lub_cat_re, 4); // 鲁班猫
+    TIM1->ARR = 5000 - 1;                        // 电机发送数据频率
     uint8_t posit_state = 0;
     //   HAL_TIM_Base_Start_IT(&htim3);//OPS9启动
     /* USER CODE END 2 */
@@ -270,32 +274,38 @@ int main(void) {
 
         /* USER CODE BEGIN 3 */
         //-----------------调试------------------------
+        if (lubanready) {
+            lubanready = false;
+            Lub_Cat_receive_start();
+            if (lub_cat_re[0] == 'f' && lub_cat_re[3] == 'f') {
+                if (lub_cat_re[1] == '1') {
+                    Lub_Cat_send_yolo(lub_cat_re[2] - 48);
+                    if (cat_centre_calibrate()) {
+                        Lub_Cat_send_exit();
+                        HAL_UART_Transmit(&huart5, (uint8_t *)"okk", sizeof("okk") - 1, HAL_MAX_DELAY);
+                    }
+                } else if (lub_cat_re[1] == '2') {
+                    Lub_Cat_send_ring();
+                    if (cat_centre_calibrate()) {
+                        Lub_Cat_send_exit();
+                        HAL_UART_Transmit(&huart5, (uint8_t *)"okk", sizeof("okk") - 1, HAL_MAX_DELAY);
+                    }
+                } else {
+                    Lub_Cat_send_material(lub_cat_re[2] - 48);
+                    if (cat_centre_calibrate()) {
+                        Lub_Cat_send_exit();
+                        HAL_UART_Transmit(&huart5, (uint8_t *)"okk", sizeof("okk") - 1, HAL_MAX_DELAY);
+                    }
+                }
+            }
+        }
         if (re_sta) { // 全局定位
             re_sta = false;
             goal_x = 0;
             goal_y = 0;
             goal_w = 0;
-            if (hc_os[0] == '9' && hc_os[1] == '9') {
-                Lub_Cat_receive_start();
-                if (hc_os[2] == '0') {
-                    Lub_Cat_send_yolo(hc_os[3] - 48);
-                    if (cat_centre_calibrate()) {
-                        Lub_Cat_send_exit();
-                    }
-                } else if (hc_os[2] == '1') {
-                    Lub_Cat_send_ring();
-                    if (cat_centre_calibrate()) {
-                        Lub_Cat_send_exit();
-                    }
-                } else if (hc_os[2] == '2') {
-                    Lub_Cat_send_material(hc_os[3] - 48);
-                    if (cat_centre_calibrate()) {
-                        Lub_Cat_send_exit();
-                    }
-                } else {
-                    Lub_Cat_send_exit();
-                }
-            } else { // 非停车指令才解析目标点，避免 'p' 被下面的 STATE_NAV 覆盖
+            // 非停车指令才解析目标点，避免 'p' 被下面的 STATE_NAV 覆盖
+            if (hc_os[16] == 'f') {
                 const int pow10[4] = {1000, 100, 10, 1};
                 for (int i = 0; i < 4; i++) {
                     if (hc_os[4] == '0')
