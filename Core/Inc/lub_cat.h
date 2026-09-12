@@ -46,7 +46,7 @@ typedef enum {
 } CAT_Yolo_t;
 
 static uint16_t calibrate_time __attribute__((unused)) = 0;
-extern volatile float ops_angle;
+extern volatile float OPS_angle;
 extern volatile float current_r;
 extern volatile bool opsready;
 extern volatile bool catready;
@@ -62,5 +62,6 @@ void Lub_Cat_send_material(CAT_Color_t color);
 void Lub_Cat_send_yolo(CAT_Yolo_t id);
 void Lub_Cat_send_exit(void);
 bool pid_to_cat(float angle_taget);
+bool cat_centre_calibrate();
 
 #endif /* INC_LUB_CAT_H_ */

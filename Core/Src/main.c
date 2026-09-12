@@ -166,10 +166,10 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
 }
 /*-------------------------------------串口外设---------------------------------*/
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
-    // if (huart == &huart5) { // 全局定位
-    //     re_sta = true;
-    //     HAL_UART_Receive_IT(&huart5, hc_os, 16);
-    // }
+    if (huart == &huart5) { // 全局定位
+        re_sta = true;
+        HAL_UART_Receive_IT(&huart5, hc_os, 16);
+    }
 
     // if(huart == &huart5){//路径规划
     // 	pt_sta = 1;
@@ -181,19 +181,19 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
     // 	HAL_UART_Receive_IT(&huart5, pathl, sizeof(pathl));//路径规划
     // }
 
-    if (huart == &huart5) { // PWM调节
-        servo_set_angle(1, (servo_re[0] - 48) * 100 + (servo_re[1] - 48) * 10 + (servo_re[2] - 48));
-        servo_set_angle(2, (servo_re[4] - 48) * 100 + (servo_re[5] - 48) * 10 + (servo_re[6] - 48));
-        servo_set_angle(3, (servo_re[8] - 48) * 100 + (servo_re[9] - 48) * 10 + (servo_re[10] - 48));
-        if (servo_re[12] == '0') { // 绝对位置
-            send_motor_place_absolute(servo_re[13] - 48,
-                                      (servo_re[14] - 48) * 100 + (servo_re[15] - 48) * 10 + (servo_re[16] - 48));
-        } else { // 相对位置
-            send_motor_place_relative(servo_re[13] - 48,
-                                      (servo_re[14] - 48) * 100 + (servo_re[15] - 48) * 10 + (servo_re[16] - 48));
-        }
-        HAL_UART_Receive_IT(&huart5, servo_re, 17);
-    }
+    // if (huart == &huart5) { // PWM调节
+    //     servo_set_angle(1, (servo_re[0] - 48) * 100 + (servo_re[1] - 48) * 10 + (servo_re[2] - 48));
+    //     servo_set_angle(2, (servo_re[4] - 48) * 100 + (servo_re[5] - 48) * 10 + (servo_re[6] - 48));
+    //     servo_set_angle(3, (servo_re[8] - 48) * 100 + (servo_re[9] - 48) * 10 + (servo_re[10] - 48));
+    //     if (servo_re[12] == '0') { // 绝对位置
+    //         send_motor_place_absolute(servo_re[13] - 48,
+    //                                   (servo_re[14] - 48) * 100 + (servo_re[15] - 48) * 10 + (servo_re[16] - 48));
+    //     } else { // 相对位置
+    //         send_motor_place_relative(servo_re[13] - 48,
+    //                                   (servo_re[14] - 48) * 100 + (servo_re[15] - 48) * 10 + (servo_re[16] - 48));
+    //     }
+    //     HAL_UART_Receive_IT(&huart5, servo_re, 17);
+    // }
 }
 /*------------------------------------数据接收错误重启--------------------------------__*/
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart) {
@@ -255,8 +255,8 @@ int main(void) {
     ops9_receive_start(); /* 启动 OPS9 接收 DMA */
     //--------------------------------调试----------------------------------
     //	HAL_UART_Receive_IT(&huart5, pathl, sizeof(pathl));//路径规划
-    // HAL_UART_Receive_IT(&huart5, hc_os, 16); // 全局定位
-    HAL_UART_Receive_IT(&huart5, servo_re, 17); // PWM调节
+    HAL_UART_Receive_IT(&huart5, hc_os, 16); // 全局定位
+    // HAL_UART_Receive_IT(&huart5, servo_re, 17); // PWM调节
     //	HAL_UART_Receive_IT(&huart5, &receive, 1);
     TIM1->ARR = 5000 - 1; // 电机发送数据频率
     uint8_t posit_state = 0;
@@ -275,8 +275,26 @@ int main(void) {
             goal_x = 0;
             goal_y = 0;
             goal_w = 0;
-            if (hc_os[0] == 'p') {
-                currentState = STATE_STOP;
+            if (hc_os[0] == '9' && hc_os[1] == '9') {
+                Lub_Cat_receive_start();
+                if (hc_os[2] == '0') {
+                    Lub_Cat_send_yolo(hc_os[3] - 48);
+                    if (cat_centre_calibrate()) {
+                        Lub_Cat_send_exit();
+                    }
+                } else if (hc_os[2] == '1') {
+                    Lub_Cat_send_ring();
+                    if (cat_centre_calibrate()) {
+                        Lub_Cat_send_exit();
+                    }
+                } else if (hc_os[2] == '2') {
+                    Lub_Cat_send_material(hc_os[3] - 48);
+                    if (cat_centre_calibrate()) {
+                        Lub_Cat_send_exit();
+                    }
+                } else {
+                    Lub_Cat_send_exit();
+                }
             } else { // 非停车指令才解析目标点，避免 'p' 被下面的 STATE_NAV 覆盖
                 const int pow10[4] = {1000, 100, 10, 1};
                 for (int i = 0; i < 4; i++) {

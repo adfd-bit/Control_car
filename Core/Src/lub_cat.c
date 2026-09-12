@@ -118,7 +118,7 @@ bool pid_to_cat(float angle_taget) {
 
     error_x = Pixel_Width_center - CAT_x;
     error_y = Pixel_Height_center - CAT_y;
-    angle_error = angle_taget - ops_angle;
+    angle_error = angle_taget - OPS_angle;
 
     vy = (double)(Kp * error_x + Kd * (error_x - error_x_last) + ki * error_x_sum);
     vx = (double)(Kp * error_y + Kd * (error_y - error_y_last) + ki * error_y_sum);

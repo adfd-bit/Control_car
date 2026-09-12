@@ -11,6 +11,7 @@
 #include "main.h"
 #include "tim.h"
 #include "stdbool.h"
+#include "stdio.h"
 #include "usart.h"
 #include "math.h"
 #include "path_plan.h"
