@@ -5,6 +5,7 @@
  *      Author: twyyd
  */
 #include "motor.h"
+// 从物料盘为0度，下降到底角度大约400度，上升到顶角度300
 float current_x = 0;
 float current_y = 0;
 float current_r = 0;
@@ -30,7 +31,7 @@ void motor_en() {
     motor_enable(5);
 }
 void send_motor_place_absolute(uint8_t dir, uint32_t pulse) {
-    pulse = pulse * 3200 / 36;
+    pulse = pulse * 320 / 36;
     uint8_t data[13];
     data[0] = 5;
     data[1] = 0xFD;
@@ -48,7 +49,7 @@ void send_motor_place_absolute(uint8_t dir, uint32_t pulse) {
     HAL_UART_Transmit(&huart2, data, sizeof(data), HAL_MAX_DELAY);
 }
 void send_motor_place_relative(uint8_t dir, uint32_t pulse) {
-    pulse = pulse * 3200 / 36;
+    pulse = pulse * 320 / 36;
     uint8_t data[13];
     data[0] = 5;
     data[1] = 0xFD;
