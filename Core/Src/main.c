@@ -19,6 +19,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "dma.h"
+#include "stm32f4xx_hal_uart.h"
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
@@ -34,6 +35,8 @@
 #include "path_plan.h"
 #include "ar_screen.h"
 #include "lub_cat.h"
+#include <stdbool.h>
+#include <stdint.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -76,10 +79,11 @@ bool pt_sta = false;
 uint8_t hc_os[17];
 int goal_x = 0, goal_y = 0, goal_w = 0;
 volatile bool re_sta = false;
-uint8_t servo_re[17];
 uint8_t lub_cat_re[4];
 volatile bool lubanready = false;
 bool luban_finish = false;
+uint8_t arm_control_data[5];
+bool arm_state = false;
 /*-----------------------------------状态变量----------------------------------*/
 uint32_t ALL_time = 0;
 volatile bool send_data_state = true;
@@ -179,24 +183,14 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
     // 	HAL_UART_Receive_IT(&huart5, pathl, sizeof(pathl));//路径规划
     // }
 
-    // if (huart == &huart5) { // PWM调节
-    //     servo_set_angle(1, (servo_re[0] - 48) * 100 + (servo_re[1] - 48) * 10 + (servo_re[2] - 48));
-    //     servo_set_angle(2, (servo_re[4] - 48) * 100 + (servo_re[5] - 48) * 10 + (servo_re[6] - 48));
-    //     servo_set_angle(3, (servo_re[8] - 48) * 100 + (servo_re[9] - 48) * 10 + (servo_re[10] - 48));
-    //     if (servo_re[12] == '0') { // 绝对位置
-    //         send_motor_place_absolute(servo_re[13] - 48,
-    //                                   (servo_re[14] - 48) * 100 + (servo_re[15] - 48) * 10 + (servo_re[16] - 48));
-    //     } else { // 相对位置
-    //         send_motor_place_relative(servo_re[13] - 48,
-    //                                   (servo_re[14] - 48) * 100 + (servo_re[15] - 48) * 10 + (servo_re[16] - 48));
-    //     }
-    //     HAL_UART_Receive_IT(&huart5, servo_re, 17);
-    // }
-
-    if (huart == &huart5) { // 鲁班猫
-        lubanready = true;
-        HAL_UART_Receive_IT(&huart1, lub_cat_re, 4);
+    if (huart == &huart5) { // 机械臂调试
+        arm_state = true;
+        HAL_UART_Receive_IT(&huart5, arm_control_data, 5);
     }
+    // if (huart == &huart5) { // 鲁班猫
+    //     lubanready = true;
+    //     HAL_UART_Receive_IT(&huart1, lub_cat_re, 4);
+    // }
 }
 /*------------------------------------数据接收错误重启--------------------------------__*/
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart) {
@@ -259,10 +253,10 @@ int main(void) {
     //--------------------------------调试----------------------------------
     //	HAL_UART_Receive_IT(&huart5, pathl, sizeof(pathl));//路径规划
     // HAL_UART_Receive_IT(&huart5, hc_os, 17); // 全局定位
-    // HAL_UART_Receive_IT(&huart5, servo_re, 17); // PWM调节
     //	HAL_UART_Receive_IT(&huart5, &receive, 1);
-    HAL_UART_Receive_IT(&huart1, lub_cat_re, 4); // 鲁班猫
-    TIM1->ARR = 5000 - 1;                        // 电机发送数据频率
+    HAL_UART_Receive_IT(&huart5, arm_control_data, 5); // 机械臂调试
+    // HAL_UART_Receive_IT(&huart1, lub_cat_re, 4);       // 鲁班猫
+    TIM1->ARR = 5000 - 1; // 电机发送数据频率
     uint8_t posit_state = 0;
     //   HAL_TIM_Base_Start_IT(&htim3);//OPS9启动
     /* USER CODE END 2 */
@@ -274,7 +268,29 @@ int main(void) {
 
         /* USER CODE BEGIN 3 */
         //-----------------调试------------------------
-        if (lubanready) {
+        if (arm_state) {
+            arm_state = false;
+            if (arm_control_data[0] == 'f') {
+                int pulse =
+                    (arm_control_data[2] - 48) * 100 + (arm_control_data[3] - 48) * 10 + arm_control_data[4] - 48;
+                servo_set_angle(arm_control_data[1] - 48, pulse);
+            } else if (arm_control_data[0] == '+') {
+                int num = (arm_control_data[2] - 48) * 100 + (arm_control_data[3] - 48) * 10 + arm_control_data[4] - 48;
+                if (arm_control_data[1] == '0') {
+                    send_motor_place_absolute(0, (uint32_t)num);
+                } else {
+                    send_motor_place_relative(0, (uint32_t)num);
+                }
+            } else if (arm_control_data[0] == '-') {
+                int num = (arm_control_data[2] - 48) * 100 + (arm_control_data[3] - 48) * 10 + arm_control_data[4] - 48;
+                if (arm_control_data[1] == '0') {
+                    send_motor_place_absolute(1, (uint32_t)num);
+                } else {
+                    send_motor_place_relative(1, (uint32_t)num);
+                }
+            }
+        }
+        if (lubanready) { // 鲁班猫
             lubanready = false;
             Lub_Cat_receive_start();
             if (lub_cat_re[0] == 'f' && lub_cat_re[3] == 'f') {
